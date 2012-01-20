@@ -22,6 +22,13 @@ typedef struct
   t_h3_file	h3file[10000];
 }		t_h3lod;
 
+void	help(char *name)
+{
+  printf("usage : %s [-hl] <*.lod>\n", name);
+  printf("-h : print this help\n");
+  printf("-l : print list of extension\n");
+}
+
 void		hexdump(char *buf, size_t size)
 {
   size_t	i;
@@ -30,10 +37,11 @@ void		hexdump(char *buf, size_t size)
     {
       if (i && i % 8 == 0)
 	printf("\n");
-      /* if (isprint(buf[i])) */
-      printf("%02X ", (unsigned char)buf[i]);
-      /* else */
-      /* 	printf("."); */
+      if (isprint(buf[i]))
+	/* printf("%02X ", (unsigned char)buf[i]); */
+	printf("%c ", buf[i]);
+      else
+      	printf(".");
     }
   printf("\n");
 }
@@ -122,16 +130,38 @@ int		read_lodfile(const char *filename)
     {
       read_h3file(fp, &header_h3lod.h3file[i]);
     }
+  fclose(fp);
   return (0);
 }
 
+extern int optind;
+
 int main(int argc, char **argv)
 {
-  if (argc != 2)
+  int c;
+
+  while ((c = getopt(argc, argv, "hl")) != -1)
     {
-      printf("usage : %s filename.pcx\n", argv[0]);
+      switch(c)
+	{
+	case 'h':
+	  help(argv[0]);
+	  exit(EXIT_SUCCESS);
+	case 'l':
+	  /* print_list(); */
+	  break;
+	case '?':
+	  printf("unknow option\n");
+	  help(argv[0]);
+	  exit(EXIT_SUCCESS);
+	}
+    }
+  if (optind >= argc)
+    {
+      help(argv[0]);
       return (-1);
     }
-  read_lodfile(argv[1]);
+  while (optind < argc)
+    read_lodfile(argv[optind++]);
   return (0);
 }
