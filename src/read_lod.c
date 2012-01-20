@@ -8,6 +8,7 @@ void	help(char *name)
   printf("-h : print this help\n");
   printf("-l : print list of extension\n");
   printf("-x <path> : extract files to <path>\n");
+  printf("-t <nb> : Choose type of file you want (ex : 1, 16, 17, 73, 80 ... )");
   printf("-v : verbose mode\n");
 }
 
@@ -57,7 +58,7 @@ int		extract_file(t_conf *config, char *uncomp,
 }
 
 int		uncompress_h3file(FILE	*fp, t_h3_file	*h3file,
-				  t_conf *config, char *name)
+				  t_conf *config)
 {
   char		*uncomp = NULL;
   char		*compress = NULL;
@@ -90,7 +91,10 @@ int		uncompress_h3file(FILE	*fp, t_h3_file	*h3file,
   if (config->verbose)
     hexdump(uncomp, 24);
   if (config->extract)
-    extract_file(config, uncomp, h3file->orgsize, name);
+    {
+      if ((config->type && config->type == h3file->type) || !config->type)
+	extract_file(config, uncomp, h3file->orgsize, h3file->name);
+    }
   free(compress);
   free(uncomp);
   return (0);
@@ -124,7 +128,7 @@ int		read_h3file(FILE	*fp, t_h3_file	*h3file, t_conf *config)
       printf("Type = %d\n", h3file->type);
       printf("Compressed Size = %d\n", h3file->comsize);
     }
-  uncompress_h3file(fp, h3file, config, h3file->name);
+  uncompress_h3file(fp, h3file, config);
   return (0);
 }
 
@@ -190,7 +194,8 @@ int		main(int argc, char **argv)
   config.print = 0;
   config.extract = 0;
   config.verbose = 0;
-  while ((c = getopt(argc, argv, "hlx:v")) != -1)
+  config.type = 0;
+  while ((c = getopt(argc, argv, "hlx:vt:")) != -1)
     {
       switch(c)
 	{
@@ -211,6 +216,9 @@ int		main(int argc, char **argv)
 	case ':':
 	  printf("-%c without path\n", optopt);
 	  exit(EXIT_FAILURE);
+	case 't':
+	  config.type = atoi(optarg);
+	  break;
 	case '?':
 	  printf("unknow option\n");
 	  help(argv[0]);
@@ -222,7 +230,7 @@ int		main(int argc, char **argv)
       help(argv[0]);
       return (-1);
     }
-  if (check_path(&config))
+  if (config.extract && check_path(&config))
     exit(EXIT_FAILURE);
   while (optind < argc)
     read_lodfile(argv[optind++], &config);
