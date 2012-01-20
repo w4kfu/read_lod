@@ -28,7 +28,36 @@ void		hexdump(char *buf, size_t size)
   printf("\n");
 }
 
-int		uncompress_h3file(FILE	*fp, t_h3_file	*h3file, t_conf *config)
+int		extract_file(t_conf *config, char *uncomp,
+			     uint32_t size, char *name)
+{
+  char		*file_path = NULL;
+  FILE		*fp;
+
+  file_path = malloc(config->size_path * sizeof(char)
+		     + strlen(name) * sizeof(char) + 3);
+  if (!file_path)
+    {
+      perror("[-] malloc()");
+      exit(EXIT_FAILURE);
+    }
+  strcpy(file_path, config->path_extract);
+  strcat(file_path, "/");
+  strcat(file_path, name);
+  fp = fopen(file_path, "wb");
+  if (!fp)
+    {
+      perror("[-] fopen()");
+      exit(EXIT_FAILURE);
+    }
+  fwrite(uncomp, size, 1, fp);
+  fclose(fp);
+  free(file_path);
+  return (0);
+}
+
+int		uncompress_h3file(FILE	*fp, t_h3_file	*h3file,
+				  t_conf *config, char *name)
 {
   char		*uncomp = NULL;
   char		*compress = NULL;
@@ -38,13 +67,13 @@ int		uncompress_h3file(FILE	*fp, t_h3_file	*h3file, t_conf *config)
   if (!compress)
     {
       perror("[-] malloc()");
-      return (-1);
+      exit(EXIT_FAILURE);
     }
   uncomp = malloc(h3file->orgsize * sizeof (char));
   if (!uncomp)
     {
       perror("[-] malloc()");
-      return (-1);
+      exit(EXIT_FAILURE);
     }
   fseek(fp, h3file->offset, SEEK_SET);
   fread(compress, sizeof (char) * h3file->comsize, 1, fp);
@@ -58,9 +87,10 @@ int		uncompress_h3file(FILE	*fp, t_h3_file	*h3file, t_conf *config)
       free(uncomp);
       return (-1);
     }
-  else
-    if (config->verbose)
-      hexdump(uncomp, 24);
+  if (config->verbose)
+    hexdump(uncomp, 24);
+  if (config->extract)
+    extract_file(config, uncomp, h3file->orgsize, name);
   free(compress);
   free(uncomp);
   return (0);
@@ -94,7 +124,7 @@ int		read_h3file(FILE	*fp, t_h3_file	*h3file, t_conf *config)
       printf("Type = %d\n", h3file->type);
       printf("Compressed Size = %d\n", h3file->comsize);
     }
-  uncompress_h3file(fp, h3file, config);
+  uncompress_h3file(fp, h3file, config, h3file->name);
   return (0);
 }
 
@@ -176,6 +206,7 @@ int		main(int argc, char **argv)
 	case 'x':
 	  config.extract = 1;
 	  config.path_extract = optarg;
+	  config.size_path = strlen(optarg);
 	  break;
 	case ':':
 	  printf("-%c without path\n", optopt);
