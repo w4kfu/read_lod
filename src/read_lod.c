@@ -1,30 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <ctype.h>
-#include <zlib.h>
-#include <string.h>
-#include "extension.h"
+#include "read_lod.h"
 
-typedef struct
-{
-  char		name[16];
-  uint32_t	offset;
-  uint32_t	orgsize;
-  uint32_t	type;
-  uint32_t	comsize;
-}		t_h3_file;
-
-typedef struct
-{
-  uint32_t	magic;
-  uint32_t	type;
-  uint32_t	nb_file;
-  uint8_t	unknown[80];
-  t_h3_file	h3file[10000];
-}		t_h3lod;
-
-extern int optind;
 struct h3_ext *lext;
 
 void	help(char *name)
@@ -32,6 +7,8 @@ void	help(char *name)
   printf("usage : %s [-hl] <*.lod>\n", name);
   printf("-h : print this help\n");
   printf("-l : print list of extension\n");
+  printf("-x <path> : extract files to <path>\n");
+  printf("-v : verbose mode\n");
 }
 
 void		hexdump(char *buf, size_t size)
@@ -51,7 +28,7 @@ void		hexdump(char *buf, size_t size)
   printf("\n");
 }
 
-int		uncompress_h3file(FILE	*fp, t_h3_file	*h3file)
+int		uncompress_h3file(FILE	*fp, t_h3_file	*h3file, t_conf *config)
 {
   char		*uncomp = NULL;
   char		*compress = NULL;
@@ -75,19 +52,21 @@ int		uncompress_h3file(FILE	*fp, t_h3_file	*h3file)
   if (uncompress((Bytef*)uncomp, &destLen,
 		 (Bytef*)compress, h3file->comsize) != Z_OK)
     {
-      printf("[-] Cannot uncompress file\n");
+      if (config->verbose)
+	printf("[-] Cannot uncompress file\n");
       free(compress);
       free(uncomp);
       return (-1);
     }
   else
-    hexdump(uncomp, 24);
+    if (config->verbose)
+      hexdump(uncomp, 24);
   free(compress);
   free(uncomp);
   return (0);
 }
 
-int		read_h3file(FILE	*fp, t_h3_file	*h3file)
+int		read_h3file(FILE	*fp, t_h3_file	*h3file, t_conf *config)
 {
   uint8_t	read[4];
   char		*ext = NULL;
@@ -95,7 +74,6 @@ int		read_h3file(FILE	*fp, t_h3_file	*h3file)
   ext = strstr(h3file->name, ".");
   if (ext)
     lext = add_extension(ext, lext, h3file->type);
-  printf("\nName = %s\n", h3file->name);
   if (fseek(fp, h3file->offset, SEEK_SET) == -1)
     {
       perror("[-] fseek()");
@@ -106,17 +84,21 @@ int		read_h3file(FILE	*fp, t_h3_file	*h3file)
       perror("[-] fread()");
       return (-1);
     }
-  printf("Offset = 0x%x    :: %02X %02X %02X %02X\n",
-	 h3file->offset,
-	 read[0], read[1], read[2], read[3]);
-  printf("Original Size = %d\n", h3file->orgsize);
-  printf("Type = %d\n", h3file->type);
-  printf("Compressed Size = %d\n", h3file->comsize);
-  uncompress_h3file(fp, h3file);
+  if (config->verbose)
+    {
+      printf("\nName = %s\n", h3file->name);
+      printf("Offset = 0x%x    :: %02X %02X %02X %02X\n",
+	     h3file->offset,
+	     read[0], read[1], read[2], read[3]);
+      printf("Original Size = %d\n", h3file->orgsize);
+      printf("Type = %d\n", h3file->type);
+      printf("Compressed Size = %d\n", h3file->comsize);
+    }
+  uncompress_h3file(fp, h3file, config);
   return (0);
 }
 
-int		read_lodfile(const char *filename)
+int		read_lodfile(const char *filename, t_conf *config)
 {
   FILE		*fp = NULL;
   t_h3lod	header_h3lod;
@@ -129,27 +111,56 @@ int		read_lodfile(const char *filename)
       return (-1);
     }
   fread(&header_h3lod, sizeof (t_h3lod), 1, fp);
-  printf("magic = %x\n", header_h3lod.magic);
   if (header_h3lod.magic != 0x00444f4c)
     {
       fprintf(stderr, "[-] Bad signature, not .lod file\n");
       return (-1);
     }
-  printf("Type = %d\n", header_h3lod.type);
-  printf("NbFile = %d\n", header_h3lod.nb_file);
-  for (i = 0; i < header_h3lod.nb_file; i++)
+  if (config->verbose)
     {
-      read_h3file(fp, &header_h3lod.h3file[i]);
+      printf("magic = %x\n", header_h3lod.magic);
+      printf("Type = %d\n", header_h3lod.type);
+      printf("NbFile = %d\n", header_h3lod.nb_file);
     }
+  for (i = 0; i < header_h3lod.nb_file; i++)
+    read_h3file(fp, &header_h3lod.h3file[i], config);
   fclose(fp);
   return (0);
 }
 
-int main(int argc, char **argv)
+int		check_path(t_conf *conf)
 {
-  int c;
+  struct stat	sbuf;
 
-  while ((c = getopt(argc, argv, "hl")) != -1)
+  if (stat(conf->path_extract, &sbuf) == -1)
+    {
+      perror("[-] stat()");
+      return (-1);
+    }
+  if ((sbuf.st_mode & S_IFMT) != S_IFDIR)
+    {
+      printf("%s is not a directory\n", conf->path_extract);
+      return (-1);
+    }
+  if (access(conf->path_extract, W_OK) == -1)
+    {
+      printf("No write access on path : %s\n", conf->path_extract);
+      return (-1);
+    }
+  return (0);
+}
+
+int		main(int argc, char **argv)
+{
+  int		c;
+  extern char	*optarg;
+  extern int	optind, optopt;
+  struct conf	config;
+
+  config.print = 0;
+  config.extract = 0;
+  config.verbose = 0;
+  while ((c = getopt(argc, argv, "hlx:v")) != -1)
     {
       switch(c)
 	{
@@ -157,8 +168,18 @@ int main(int argc, char **argv)
 	  help(argv[0]);
 	  exit(EXIT_SUCCESS);
 	case 'l':
-	  /* print_list(); */
+	  config.print = 1;
 	  break;
+	case 'v':
+	  config.verbose = 1;
+	  break;
+	case 'x':
+	  config.extract = 1;
+	  config.path_extract = optarg;
+	  break;
+	case ':':
+	  printf("-%c without path\n", optopt);
+	  exit(EXIT_FAILURE);
 	case '?':
 	  printf("unknow option\n");
 	  help(argv[0]);
@@ -170,9 +191,12 @@ int main(int argc, char **argv)
       help(argv[0]);
       return (-1);
     }
+  if (check_path(&config))
+    exit(EXIT_FAILURE);
   while (optind < argc)
-    read_lodfile(argv[optind++]);
-  print_extension(lext);
+    read_lodfile(argv[optind++], &config);
+  if (config.print)
+    print_extension(lext);
   clean_extension(lext);
   return (0);
 }
