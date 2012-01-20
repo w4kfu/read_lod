@@ -86,15 +86,6 @@ Header File Specification
 +0x1C	7544			/* Compressed size ?	*/
 
 
-Type of file :
-
-- 1 : .h3c
-- 2 : .txt
-- 16 : .pcx
-- 71 : .def
-
-
-
 Offset = 0xa2b5ba    :: 78 9C EC BD // 78 9C == ZLIB
 
 See section 2.2 in rfc1950.
@@ -105,4 +96,26 @@ FLG: 0x9C
 bits 0 to 4: check bits, 0x789C = 30876, which is a multiple of 31
 bit 5: no preset dictionary
 bits 6 to 7: compression level 2, irrelevant for decompression
-0xEC and 0xBD: start of data, see rfc 1951 or use ZLIB to decode. 
+0xEC and 0xBD: start of data, see rfc 1951 or use ZLIB to decode.
+
++-----+
++
++ All Type of file for each extension :
++
++-----+
+
+Extension Name = .PAL ; Nb = 1 ; Type = [ 96 ]
+Extension Name = .ifr ; Nb = 1 ; Type = [ 1 ]
+Extension Name = .pal ; Nb = 2 ; Type = [ 96 ]
+Extension Name = .H3C ; Nb = 1 ; Type = [ 1 ]
+Extension Name = .xmi ; Nb = 1 ; Type = [ 1 ]
+Extension Name = .FNT ; Nb = 4 ; Type = [ 80 ]
+Extension Name = .fnt ; Nb = 5 ; Type = [ 80 ]
+Extension Name = .TXT ; Nb = 17 ; Type = [ 2 ]
+Extension Name = .PCX ; Nb = 1025 ; Type = [ 17, 16 ]
+Extension Name = .pcx ; Nb = 6190 ; Type = [ 16, 17 ]
+Extension Name = .DEF ; Nb = 201 ; Type = [ 73, 66, 64, 67, 68, 71 ]
+Extension Name = .msk ; Nb = 1670 ; Type = [ 79 ]
+Extension Name = .def ; Nb = 2712 ; Type = [ 70, 73, 66, 64, 65, 67, 69, 68, 71 ]
+Extension Name = .h3c ; Nb = 30 ; Type = [ 1 ]
+Extension Name = .txt ; Nb = 192 ; Type = [ 2 ]

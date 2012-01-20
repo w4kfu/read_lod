@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <ctype.h>
 #include <zlib.h>
+#include <string.h>
+#include "extension.h"
 
 typedef struct
 {
@@ -21,6 +23,9 @@ typedef struct
   uint8_t	unknown[80];
   t_h3_file	h3file[10000];
 }		t_h3lod;
+
+extern int optind;
+struct h3_ext *lext;
 
 void	help(char *name)
 {
@@ -71,6 +76,8 @@ int		uncompress_h3file(FILE	*fp, t_h3_file	*h3file)
 		 (Bytef*)compress, h3file->comsize) != Z_OK)
     {
       printf("[-] Cannot uncompress file\n");
+      free(compress);
+      free(uncomp);
       return (-1);
     }
   else
@@ -83,7 +90,11 @@ int		uncompress_h3file(FILE	*fp, t_h3_file	*h3file)
 int		read_h3file(FILE	*fp, t_h3_file	*h3file)
 {
   uint8_t	read[4];
+  char		*ext = NULL;
 
+  ext = strstr(h3file->name, ".");
+  if (ext)
+    lext = add_extension(ext, lext, h3file->type);
   printf("\nName = %s\n", h3file->name);
   if (fseek(fp, h3file->offset, SEEK_SET) == -1)
     {
@@ -134,8 +145,6 @@ int		read_lodfile(const char *filename)
   return (0);
 }
 
-extern int optind;
-
 int main(int argc, char **argv)
 {
   int c;
@@ -163,5 +172,7 @@ int main(int argc, char **argv)
     }
   while (optind < argc)
     read_lodfile(argv[optind++]);
+  print_extension(lext);
+  clean_extension(lext);
   return (0);
 }
