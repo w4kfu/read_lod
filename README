@@ -1,0 +1,54 @@
+Try to get data from heroes of might and magic 3 .lod file
+
+
+Header Specification
+
++0x00	"LOD" // 0x00444f4c	/* MAGIC NUMBER */
++0x04	200 ; 500 ; ...		/* ???????????? */
++0x08	4013  	    		/* NB FILE ?    */
++0x0C	00 00 00 00 ...		/* WTF ?   	*/
++0x5C	"ab.h3c"
+
+....
+
+	LOTS OF FILES, maybe an index
+
+Header File Specification
+
++0x00	"ab.h3c"		/* NAME			*/
++0x10	0x4e25c			/* Offset in file ?	*/
++0x14	210389			/* Original Size	*/
++0x18	1			/* TYPE ?		*/
++0x1C	0			/* Compressed size ?	*/
+
+...
+
++0x00	"AdvEvent.txt"		/* NAME			*/
++0x10	0x81831			/* Offset in file ?	*/
++0x14	23410			/* Original Size	*/
++0x18	2			/* TYPE ?		*/
++0x1C	7544			/* Compressed size ?	*/
+
+...
+
++0x00	"ArA_CoBl.pcx"		/* NAME			*/
++0x10	0x13e677		/* Offset in file ?	*/
++0x14	5004			/* Original Size	*/
++0x18	16			/* TYPE ?		*/
++0x1C	3646			/* Compressed size ?	*/
+
+...
+
++0x00	"Artifact.def"		/* NAME			*/
++0x10	0x81831			/* Offset in file ?	*/
++0x14	23410			/* Original Size	*/
++0x18	71			/* TYPE ?		*/
++0x1C	7544			/* Compressed size ?	*/
+
+
+Type of file :
+
+- 1 : .h3c
+- 2 : .txt
+- 16 : .pcx
+- 71 : .def
