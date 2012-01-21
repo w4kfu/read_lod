@@ -95,6 +95,10 @@ int		uncompress_h3file(FILE	*fp, t_h3_file	*h3file,
       if ((config->type && config->type == h3file->type) || !config->type)
 	extract_file(config, uncomp, h3file->orgsize, h3file->name);
     }
+  if (h3file->type == 17)
+    {
+      read_pcx(uncomp, h3file->orgsize, h3file->name);
+    }
   free(compress);
   free(uncomp);
   return (0);
